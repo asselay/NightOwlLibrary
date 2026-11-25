@@ -9,7 +9,6 @@ import com.nightowl.library.data.model.formatHour
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 object LibraryRepository {
 
@@ -66,13 +65,8 @@ object LibraryRepository {
         Seat(13, "Sofa C2", 5)
     )
 
-    private val _reservations = MutableStateFlow<List<Reservation>>(emptyList())
-    val reservations: StateFlow<List<Reservation>> = _reservations.asStateFlow()
-
     private val _nightMode = MutableStateFlow(false)
     val nightMode: StateFlow<Boolean> = _nightMode.asStateFlow()
-
-    private var nextReservationId = 1
 
     fun getBook(id: Int): Book? = _books.value.firstOrNull { it.id == id }
 
@@ -92,14 +86,19 @@ object LibraryRepository {
         zoneId: Int,
         start: Int,
         end: Int,
-        current: List<Reservation> = _reservations.value
+        current: List<Reservation>
     ): List<Seat> = seats.filter { seat ->
         seat.zoneId == zoneId && (start until end).any { hour ->
             current.none { it.seatId == seat.id && hour >= it.startHour && hour < it.endHour }
         }
     }
 
-    fun reserve(seatId: Int, studentName: String, startHour: Int, endHour: Int): String? {
+    fun validateReservation(
+        seatId: Int,
+        studentName: String,
+        startHour: Int,
+        endHour: Int
+    ): String? {
         val seat = getSeat(seatId) ?: return "Seat not found."
         val zone = getZone(seat.zoneId) ?: return "Zone not found."
         if (studentName.isBlank()) return "Please enter your name."
@@ -108,17 +107,6 @@ object LibraryRepository {
             return "Choose a time between ${formatHour(windowStart())} and ${formatHour(windowEnd())}."
         }
         if (_nightMode.value && !zone.openAtNight) return "${zone.name} is closed at night."
-        val conflict = _reservations.value.firstOrNull {
-            it.seatId == seatId && it.overlaps(startHour, endHour)
-        }
-        if (conflict != null) return "${seat.name} is already reserved ${conflict.timeRange}."
-        _reservations.update {
-            it + Reservation(nextReservationId++, seat.id, seat.name, zone.name, studentName.trim(), startHour, endHour)
-        }
         return null
-    }
-
-    fun cancelReservation(id: Int) {
-        _reservations.update { list -> list.filterNot { it.id == id } }
     }
 }
