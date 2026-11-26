@@ -10,27 +10,27 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nightowl.library.data.model.Seat
 import com.nightowl.library.data.model.Zone
 import com.nightowl.library.data.model.formatHour
-import com.nightowl.library.data.repository.LibraryRepository
 import com.nightowl.library.ui.components.AppTopBar
 import com.nightowl.library.ui.components.EmptyState
-import com.nightowl.library.ui.components.HourStepper
 import com.nightowl.library.ui.components.QuietBadge
-import com.nightowl.library.ui.theme.NightOwlLibraryTheme
-import com.nightowl.library.ui.theme.ScreenPreview
+import com.nightowl.library.ui.theme.NightOwlPreview
+import com.nightowl.library.ui.theme.PreviewData
 import com.nightowl.library.viewmodel.ReserveUiState
 import com.nightowl.library.viewmodel.ReserveViewModel
 
@@ -38,7 +38,7 @@ import com.nightowl.library.viewmodel.ReserveViewModel
 fun ReserveSeatScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
-    viewModel: ReserveViewModel = viewModel()
+    viewModel: ReserveViewModel = viewModel(factory = ReserveViewModel.Factory)
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -62,7 +62,7 @@ fun ReserveSeatScreen(
 }
 
 @Composable
-private fun ReserveSeatContent(
+fun ReserveSeatContent(
     seat: Seat?,
     zone: Zone?,
     nightMode: Boolean,
@@ -76,7 +76,10 @@ private fun ReserveSeatContent(
     onBack: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        AppTopBar(title = "Reserve seat", onBack = onBack)
+        AppTopBar(
+            title = if (state.isEditMode) "Edit reservation" else "Reserve seat",
+            onBack = onBack
+        )
 
         if (seat == null || zone == null) {
             EmptyState(message = "Seat not found.")
@@ -88,21 +91,22 @@ private fun ReserveSeatContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${seat.name}  •  ${zone.name}",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = seat.name, style = MaterialTheme.typography.titleLarge)
+                        Text(text = zone.name, style = MaterialTheme.typography.bodyMedium)
+                    }
                     QuietBadge(level = zone.quietLevel)
                 }
 
-                if (nightMode) {
-                    Text(
-                        text = "Night mode: choose a time between ${formatHour(windowStart)} and ${formatHour(windowEnd)}.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    text = if (nightMode) {
+                        "Night mode: choose a time between ${formatHour(windowStart)} and ${formatHour(windowEnd)}"
+                    } else {
+                        "Available ${formatHour(windowStart)} – ${formatHour(windowEnd)}"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
                 OutlinedTextField(
                     value = state.studentName,
@@ -112,21 +116,17 @@ private fun ReserveSeatContent(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                HourStepper(
-                    label = "From",
-                    value = formatHour(state.startHour),
-                    onDecrease = { onStartChange(-1) },
-                    onIncrease = { onStartChange(1) },
-                    canDecrease = state.startHour > windowStart,
-                    canIncrease = state.startHour < windowEnd - 1
+                TimeStepper(
+                    label = "Start",
+                    hour = state.startHour,
+                    onMinus = { onStartChange(-1) },
+                    onPlus = { onStartChange(1) }
                 )
-                HourStepper(
-                    label = "To",
-                    value = formatHour(state.endHour),
-                    onDecrease = { onEndChange(-1) },
-                    onIncrease = { onEndChange(1) },
-                    canDecrease = state.endHour > state.startHour + 1,
-                    canIncrease = state.endHour < windowEnd
+                TimeStepper(
+                    label = "End",
+                    hour = state.endHour,
+                    onMinus = { onEndChange(-1) },
+                    onPlus = { onEndChange(1) }
                 )
 
                 state.error?.let { message ->
@@ -137,103 +137,86 @@ private fun ReserveSeatContent(
                     )
                 }
 
-                Button(onClick = onSubmit, modifier = Modifier.fillMaxWidth()) {
-                    Text("Confirm reservation")
+                Button(
+                    onClick = onSubmit,
+                    enabled = !state.isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (state.isEditMode) "Save changes" else "Confirm reservation")
                 }
             }
         }
     }
 }
 
-@ScreenPreview
 @Composable
-private fun ReserveSeatContentPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            ReserveSeatContent(
-                seat = LibraryRepository.seats.first(),
-                zone = LibraryRepository.zones.first(),
-                nightMode = false,
-                windowStart = 0,
-                windowEnd = 24,
-                state = ReserveUiState(studentName = "Asselay", startHour = 9, endHour = 11),
-                onNameChange = {},
-                onStartChange = {},
-                onEndChange = {},
-                onSubmit = {},
-                onBack = {}
-            )
-        }
+private fun TimeStepper(
+    label: String,
+    hour: Int,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(onClick = onMinus) { Text("-") }
+        Text(
+            text = formatHour(hour),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        OutlinedButton(onClick = onPlus) { Text("+") }
     }
 }
 
-@ScreenPreview
+@PreviewLightDark
 @Composable
-private fun ReserveSeatContentNightPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            ReserveSeatContent(
-                seat = LibraryRepository.seats.first(),
-                zone = LibraryRepository.zones.first(),
-                nightMode = true,
-                windowStart = 0,
-                windowEnd = 6,
-                state = ReserveUiState(studentName = "Asselay", startHour = 4, endHour = 6),
-                onNameChange = {},
-                onStartChange = {},
-                onEndChange = {},
-                onSubmit = {},
-                onBack = {}
-            )
-        }
+private fun ReserveSeatPreview() {
+    NightOwlPreview {
+        ReserveSeatContent(
+            seat = PreviewData.seats.first(),
+            zone = PreviewData.zones.first(),
+            nightMode = false,
+            windowStart = 0,
+            windowEnd = 24,
+            state = ReserveUiState(studentName = "Asselay", startHour = 9, endHour = 11),
+            onNameChange = {},
+            onStartChange = {},
+            onEndChange = {},
+            onSubmit = {},
+            onBack = {}
+        )
     }
 }
 
-@ScreenPreview
+@Preview(name = "Edit with error", showBackground = true)
 @Composable
-private fun ReserveSeatContentErrorPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            ReserveSeatContent(
-                seat = LibraryRepository.seats.first(),
-                zone = LibraryRepository.zones.first(),
-                nightMode = false,
-                windowStart = 0,
-                windowEnd = 24,
-                state = ReserveUiState(
-                    studentName = "Asselay",
-                    startHour = 1,
-                    endHour = 3,
-                    error = "Desk A1 is already reserved 00:00 – 02:00."
-                ),
-                onNameChange = {},
-                onStartChange = {},
-                onEndChange = {},
-                onSubmit = {},
-                onBack = {}
-            )
-        }
-    }
-}
-
-@ScreenPreview
-@Composable
-private fun ReserveSeatContentNotFoundPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            ReserveSeatContent(
-                seat = null,
-                zone = null,
-                nightMode = false,
-                windowStart = 0,
-                windowEnd = 24,
-                state = ReserveUiState(),
-                onNameChange = {},
-                onStartChange = {},
-                onEndChange = {},
-                onSubmit = {},
-                onBack = {}
-            )
-        }
+private fun ReserveSeatErrorPreview() {
+    NightOwlPreview {
+        ReserveSeatContent(
+            seat = PreviewData.seats.first(),
+            zone = PreviewData.zones.first(),
+            nightMode = true,
+            windowStart = 0,
+            windowEnd = 6,
+            state = ReserveUiState(
+                studentName = "Asselay",
+                startHour = 1,
+                endHour = 4,
+                isEditMode = true,
+                error = "Desk A1 is already reserved 02:00 – 03:00."
+            ),
+            onNameChange = {},
+            onStartChange = {},
+            onEndChange = {},
+            onSubmit = {},
+            onBack = {}
+        )
     }
 }

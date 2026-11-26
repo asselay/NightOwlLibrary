@@ -1,65 +1,61 @@
 package com.nightowl.library.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import com.nightowl.library.ui.theme.ComponentPreview
-import com.nightowl.library.ui.theme.NightOwlLibraryTheme
+import com.nightowl.library.ui.theme.NightOwlPreview
 
 @Composable
 fun HourStepper(
     label: String,
-    value: String,
-    onDecrease: () -> Unit,
-    onIncrease: () -> Unit,
-    modifier: Modifier = Modifier,
-    canDecrease: Boolean = true,
-    canIncrease: Boolean = true
+    hour: Int,
+    onHourChange: (Int) -> Unit,
+    minHour: Int,
+    maxHour: Int,
+    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f)
         )
-        OutlinedButton(onClick = onDecrease, enabled = canDecrease) { Text("-") }
-        Text(text = value, style = MaterialTheme.typography.titleLarge)
-        OutlinedButton(onClick = onIncrease, enabled = canIncrease) { Text("+") }
+        OutlinedButton(onClick = { if (hour > minHour) onHourChange(hour - 1) }) {
+            Text("-")
+        }
+        Text(
+            text = "%02d:00".format(hour),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        OutlinedButton(onClick = { if (hour < maxHour) onHourChange(hour + 1) }) {
+            Text("+")
+        }
     }
 }
 
-@ComponentPreview
+@PreviewLightDark
 @Composable
 private fun HourStepperPreview() {
-    NightOwlLibraryTheme {
-        Surface {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HourStepper(label = "From", value = "02:00", onDecrease = {}, onIncrease = {})
-                HourStepper(
-                    label = "To",
-                    value = "06:00",
-                    onDecrease = {},
-                    onIncrease = {},
-                    canIncrease = false
-                )
-            }
-        }
+    NightOwlPreview {
+        HourStepper(
+            label = "Start",
+            hour = 2,
+            onHourChange = {},
+            minHour = 0,
+            maxHour = 23,
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
