@@ -1,27 +1,26 @@
 package com.nightowl.library.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-import com.nightowl.library.ui.theme.ComponentPreview
-import com.nightowl.library.ui.theme.NightOwlLibraryTheme
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import com.nightowl.library.ui.theme.NightOwlPreview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
     title: String,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
         title = { Text(title) },
@@ -35,23 +34,28 @@ fun AppTopBar(
                 }
             }
         },
+        actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }
 
-@ComponentPreview
+@PreviewLightDark
 @Composable
 private fun AppTopBarPreview() {
-    NightOwlLibraryTheme {
-        Surface {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppTopBar(title = "Book details", onBack = {})
-                AppTopBar(title = "Book catalog")
+    NightOwlPreview {
+        AppTopBar(
+            title = "NightOwl Library",
+            onBack = {},
+            actions = {
+                IconButton(onClick = {}) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
+                }
             }
-        }
+        )
     }
 }

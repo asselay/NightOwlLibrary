@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -16,13 +18,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.nightowl.library.ui.navigation.AppNavHost
 import com.nightowl.library.ui.navigation.Routes
-import com.nightowl.library.ui.theme.NightOwlLibraryTheme
-import com.nightowl.library.ui.theme.ScreenPreview
+import com.nightowl.library.ui.theme.NightOwlPreview
 
 private data class BottomItem(
     val route: String,
@@ -30,41 +32,37 @@ private data class BottomItem(
     val icon: ImageVector
 )
 
+private val bottomItems = listOf(
+    BottomItem(Routes.CATALOG, "Catalog", Icons.Default.Home),
+    BottomItem(Routes.DISCOVER, "Discover", Icons.Default.Search),
+    BottomItem(Routes.ZONES, "Zones", Icons.Default.Place),
+    BottomItem(Routes.MY_RESERVATIONS, "Bookings", Icons.Default.DateRange),
+    BottomItem(Routes.READING_LIST, "My list", Icons.AutoMirrored.Filled.List)
+)
+
 @Composable
 fun NightOwlApp() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-
-    val items = listOf(
-        BottomItem(Routes.CATALOG, "Books", Icons.Default.Search),
-        BottomItem(Routes.SEATS, "Seats", Icons.Default.Place),
-        BottomItem(Routes.RESERVATIONS, "My seat", Icons.Default.DateRange)
-    )
-    val showBottomBar = items.any { it.route == currentRoute }
+    val showBottomBar = bottomItems.any { it.route == currentRoute }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    items.forEach { item ->
-                        NavigationBarItem(
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) }
-                        )
+                NightOwlBottomBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->
@@ -77,10 +75,27 @@ fun NightOwlApp() {
     }
 }
 
-@ScreenPreview
 @Composable
-private fun NightOwlAppPreview() {
-    NightOwlLibraryTheme {
-        NightOwlApp()
+private fun NightOwlBottomBar(
+    currentRoute: String?,
+    onNavigate: (String) -> Unit
+) {
+    NavigationBar {
+        bottomItems.forEach { item ->
+            NavigationBarItem(
+                selected = currentRoute == item.route,
+                onClick = { onNavigate(item.route) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) }
+            )
+        }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun NightOwlBottomBarPreview() {
+    NightOwlPreview {
+        NightOwlBottomBar(currentRoute = Routes.DISCOVER, onNavigate = {})
     }
 }

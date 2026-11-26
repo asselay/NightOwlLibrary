@@ -3,40 +3,45 @@ package com.nightowl.library.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nightowl.library.data.model.Book
-import com.nightowl.library.data.repository.LibraryRepository
 import com.nightowl.library.ui.components.AppTopBar
 import com.nightowl.library.ui.components.EmptyState
-import com.nightowl.library.ui.theme.NightOwlLibraryTheme
-import com.nightowl.library.ui.theme.ScreenPreview
+import com.nightowl.library.ui.theme.NightOwlPreview
+import com.nightowl.library.ui.theme.PreviewData
 import com.nightowl.library.viewmodel.BookDetailViewModel
 
 @Composable
 fun BookDetailScreen(
     onBack: () -> Unit,
+    onFindSeat: (() -> Unit)? = null,
     viewModel: BookDetailViewModel = viewModel()
 ) {
-    val book by viewModel.book.collectAsStateWithLifecycle()
-
-    BookDetailContent(book = book, onBack = onBack)
+    BookDetailContent(
+        book = viewModel.book,
+        onBack = onBack,
+        onFindSeat = onFindSeat
+    )
 }
 
 @Composable
-private fun BookDetailContent(
+fun BookDetailContent(
     book: Book?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onFindSeat: (() -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         AppTopBar(title = "Book details", onBack = onBack)
@@ -52,67 +57,52 @@ private fun BookDetailContent(
             ) {
                 Text(text = book.title, style = MaterialTheme.typography.headlineSmall)
                 Text(text = "by ${book.author}", style = MaterialTheme.typography.titleMedium)
+                Text(text = "Category: ${book.category}", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = book.category,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(text = book.description, style = MaterialTheme.typography.bodyLarge)
-
-                Text(text = "Where to find it", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "${book.aisle}  •  ${book.shelf}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = if (book.isAvailable) {
-                        "Available now. You can take it from the shelf."
-                    } else {
-                        "Currently borrowed. Check again later."
-                    },
+                    text = "Location: ${book.aisle}, ${book.shelf}",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    text = if (book.isAvailable) "Available now" else "Currently checked out",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (book.isAvailable) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    }
+                )
+                HorizontalDivider()
+                Text(text = book.description, style = MaterialTheme.typography.bodyLarge)
+                if (onFindSeat != null) {
+                    Button(onClick = onFindSeat, modifier = Modifier.fillMaxWidth()) {
+                        Text("Find a study seat")
+                    }
+                }
             }
         }
     }
 }
 
-@ScreenPreview
+@PreviewLightDark
 @Composable
-private fun BookDetailContentPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            BookDetailContent(
-                book = LibraryRepository.books.value.first(),
-                onBack = {}
-            )
-        }
+private fun BookDetailPreview() {
+    NightOwlPreview {
+        BookDetailContent(
+            book = PreviewData.books[0],
+            onBack = {},
+            onFindSeat = {}
+        )
     }
 }
 
-@ScreenPreview
+@Preview(name = "Checked out", showBackground = true)
 @Composable
-private fun BookDetailContentBorrowedPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            BookDetailContent(
-                book = LibraryRepository.books.value.last(),
-                onBack = {}
-            )
-        }
-    }
-}
-
-@ScreenPreview
-@Composable
-private fun BookDetailContentNotFoundPreview() {
-    NightOwlLibraryTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            BookDetailContent(
-                book = null,
-                onBack = {}
-            )
-        }
+private fun BookDetailCheckedOutPreview() {
+    NightOwlPreview {
+        BookDetailContent(
+            book = PreviewData.books[1],
+            onBack = {},
+            onFindSeat = null
+        )
     }
 }
